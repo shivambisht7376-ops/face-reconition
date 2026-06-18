@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Face Recognition — FaceID System{% endblock %}
+{% block page_title %}Live Face Recognition{% endblock %}
+
+{% block content %}
+<div class="recognize-wrap">
+
+    <div class="recognize-grid">
+
+        <!-- ── Left: Camera Feed ─────────────────── -->
+        <div class="recognize-camera-col">
+            <div class="panel-card camera-panel-tall">
+
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        Live Camera Feed
+                    </h3>
+                    <!-- Status badge -->
+                    <span class="status-badge" id="camera-status-badge">⭕ Camera Off</span>
+                </div>
+
+                <!-- Video element -->
+                <div class="camera-viewport camera-viewport-lg" id="rec-viewport">
+                    <video id="rec-video" autoplay muted playsinline></video>
+                    <canvas id="rec-canvas" style="display:none;"></canvas>
+
+                    <!-- Scanning animation overlay (shown while running) -->
+                    <div class="scan-overlay" id="scan-overlay" style="display:none;">
+                        <div class="scan-line"></div>
+                        <div class="scan-corners">
+                            <span class="sc sc-tl"></span>
+                            <span class="sc sc-tr"></span>
+                            <span class="sc sc-bl"></span>
+                            <span class="sc sc-br"></span>
+                        </div>
+                    </div>
+
+                    <!-- Camera off placeholder -->
+                    <div class="camera-placeholder" id="rec-placeholder">
+                        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        <p>Camera not started</p>
+                        <span>Click "Start Recognition" below</span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="camera-controls" style="margin-top:1rem;">
+                    <button class="btn btn-primary" id="btn-rec-start" onclick="startRecognition()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        Start Recognition
+                    </button>
+                    <button class="btn btn-danger" id="btn-rec-stop" onclick="stopRecognition()" style="display:none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <rect x="6" y="6" width="12" height="12" rx="1"/>
+                        </svg>
+                        Stop
+                    </button>
+                </div>
+
+                <!-- Scan interval indicator -->
+                <p class="camera-tip" id="scan-info" style="display:none;">
+                    🔄 Scanning every <strong>1.5 seconds</strong> — Keep your face centred in the frame.
+                </p>
+            </div>
+        </div>
+
+        <!-- ── Right: Recognition Result ──────────── -->
+        <div class="recognize-result-col">
+            <div class="panel-card result-panel">
+
+                <h3 class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    Recognition Result
+                </h3>
+
+                <!-- Waiting state -->
+                <div class="result-state result-waiting" id="result-waiting">
+                    <div class="waiting-icon">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                            <circle cx="12" cy="8" r="4"/>
+                            <path d="M2 20a10 10 0 0 1 20 0"/>
+                            <path d="M1 1l4 4m14 0l4-4M1 23l4-4m14 0l4 4"/>
+                        </svg>
+                    </div>
+                    <p>Start the camera to begin face recognition.</p>
+                </div>
+
+                <!-- Scanning state -->
+                <div class="result-state result-scanning" id="result-scanning" style="display:none;">
+                    <div class="scanning-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <p>Scanning for faces…</p>
+                </div>
+
+                <!-- No face state -->
+                <div class="result-state result-no-face" id="result-no-face" style="display:none;">
+                    <div class="waiting-icon">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="8" y1="15" x2="16" y2="15"/>
+                            <line x1="9" y1="9" x2="9.01" y2="9"/>
+                            <line x1="15" y1="9" x2="15.01" y2="9"/>
+                        </svg>
+                    </div>
+                    <p>No face detected in frame.<br/>Please position your face towards the camera.</p>
+                </div>
+
+                <!-- Unknown person state -->
+                <div class="result-state result-unknown" id="result-unknown" style="display:none;">
+                    <div class="unknown-icon">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                    </div>
+                    <h4>Unknown Person</h4>
+                    <p>This face does not match any registered student in the database.</p>
+                    <a href="{{ url_for('register') }}" class="btn btn-ghost btn-sm">Register this person →</a>
+                </div>
+
+                <!-- Match found state -->
+                <div class="result-match" id="result-match" style="display:none;">
+                    <div class="match-header">
+                        <div class="match-avatar" id="match-avatar">
+                            <img id="match-photo" src="" alt="Person Photo" />
+                        </div>
+                        <div class="match-badge">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            Recognized
+                        </div>
+                        <div class="confidence-bar-wrap">
+                            <span class="confidence-label">Confidence</span>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidence-fill"></div>
+                            </div>
+                            <span class="confidence-pct" id="confidence-pct">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Info Fields (populated by JS) -->
+                    <div class="match-info" id="match-info"></div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/recognize.js') }}"></script>
+{% endblock %}

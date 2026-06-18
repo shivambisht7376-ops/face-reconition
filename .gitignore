@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+
+# Virtual Environment
+venv/
+env/
+.env
+.venv/
+
+# Flask
+instance/
+*.db
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs & temp
+*.log
+*.tmp
+
+# Face recognition model files (large binaries)
+*.dat
+*.xml
+shape_predictor_*.dat
+dlib_face_recognition_resnet_model_v1.dat

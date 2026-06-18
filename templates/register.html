@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Register Person — FaceID System{% endblock %}
+{% block page_title %}Register New Person{% endblock %}
+
+{% block content %}
+<div class="register-wrap">
+
+    <div class="register-grid">
+
+        <!-- ── Left: Camera / Image Upload ──────────── -->
+        <div class="register-camera-panel">
+            <div class="panel-card">
+                <h3 class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    Face Image
+                </h3>
+
+                <!-- Tab Switcher -->
+                <div class="tab-switcher" role="tablist">
+                    <button class="tab-btn active" id="tab-webcam-btn" role="tab" aria-selected="true" onclick="switchTab('webcam')">
+                        📷 Use Webcam
+                    </button>
+                    <button class="tab-btn" id="tab-upload-btn" role="tab" aria-selected="false" onclick="switchTab('upload')">
+                        📁 Upload File
+                    </button>
+                </div>
+
+                <!-- Webcam Tab -->
+                <div id="tab-webcam" class="tab-panel">
+                    <div class="camera-viewport" id="camera-viewport">
+                        <video id="reg-video" autoplay muted playsinline></video>
+                        <div class="camera-overlay">
+                            <div class="face-guide-box"></div>
+                        </div>
+                        <div class="camera-placeholder" id="cam-placeholder">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                            <p>Camera is off</p>
+                        </div>
+                    </div>
+
+                    <canvas id="reg-canvas" style="display:none;"></canvas>
+                    <input type="hidden" id="webcam-image-data" name="webcam_image_hidden" />
+
+                    <div class="camera-controls">
+                        <button type="button" class="btn btn-secondary" id="btn-start-cam" onclick="startCam()">
+                            Start Camera
+                        </button>
+                        <button type="button" class="btn btn-primary" id="btn-capture" onclick="capturePhoto()" disabled>
+                            📸 Capture Photo
+                        </button>
+                    </div>
+
+                    <!-- Captured Preview -->
+                    <div id="capture-preview" class="capture-preview" style="display:none;">
+                        <img id="captured-img" src="" alt="Captured face" />
+                        <div class="capture-badge">✅ Photo Captured</div>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="retakePhoto()">Retake</button>
+                    </div>
+                </div>
+
+                <!-- Upload Tab -->
+                <div id="tab-upload" class="tab-panel" style="display:none;">
+                    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('face_image_input').click()">
+                        <input type="file" id="face_image_input" name="face_image_upload" accept="image/*" style="display:none;" onchange="previewUpload(event)" />
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <p>Click to upload or drag &amp; drop</p>
+                        <span>JPG, PNG, WEBP — Max 5MB</span>
+                    </div>
+                    <div id="upload-preview" class="capture-preview" style="display:none;">
+                        <img id="uploaded-img" src="" alt="Uploaded face" />
+                        <div class="capture-badge">✅ Image Selected</div>
+                    </div>
+                </div>
+
+                <p class="camera-tip">💡 Ensure the face is well-lit and clearly visible. Avoid sunglasses or masks.</p>
+            </div>
+        </div>
+
+        <!-- ── Right: Registration Form ──────────── -->
+        <div class="register-form-panel">
+            <div class="panel-card">
+                <h3 class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    Person Details
+                </h3>
+
+                <form id="register-form" method="POST" action="{{ url_for('register') }}" enctype="multipart/form-data" novalidate>
+
+                    <!-- Hidden: webcam image data -->
+                    <input type="hidden" name="webcam_image" id="form-webcam-image" />
+                    <!-- Hidden: file input (submitted by form directly when using upload tab) -->
+
+                    <!-- Required Fields -->
+                    <div class="form-section-label">Required</div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="name">Full Name <span class="required-star">*</span></label>
+                        <input class="form-input" type="text" id="name" name="name"
+                               placeholder="e.g. Alice Johnson" required autocomplete="name" />
+                        <span class="form-error" id="err-name"></span>
+                    </div>
+
+                    <!-- Optional Fields -->
+                    <div class="form-section-label" style="margin-top:1.25rem;">Optional</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="mobile">Mobile Number</label>
+                            <input class="form-input" type="tel" id="mobile" name="mobile"
+                                   placeholder="e.g. 9876543210" autocomplete="tel" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="dob">Date of Birth</label>
+                            <input class="form-input" type="date" id="dob" name="dob" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email Address</label>
+                        <input class="form-input" type="email" id="email" name="email"
+                               placeholder="e.g. alice@college.edu" autocomplete="email" />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="department">Department</label>
+                            <select class="form-input form-select" id="department" name="department">
+                                <option value="">— Select —</option>
+                                <option>Computer Science</option>
+                                <option>Electronics</option>
+                                <option>Mechanical</option>
+                                <option>Civil</option>
+                                <option>Information Technology</option>
+                                <option>Electrical</option>
+                                <option>Chemical</option>
+                                <option>Biotechnology</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="student_id">Student ID</label>
+                            <input class="form-input" type="text" id="student_id" name="student_id"
+                                   placeholder="e.g. CS2022001" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="address">Address</label>
+                        <textarea class="form-input form-textarea" id="address" name="address"
+                                  placeholder="Street, City, State" rows="2"></textarea>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-submit" onclick="return prepareSubmit()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        Register Person
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+{% endblock %}
