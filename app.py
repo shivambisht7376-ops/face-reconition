@@ -1544,6 +1544,20 @@ def admin_attendance_export():
 
 
 # ─────────────────────────────────────────────
+# Application Initialization
+# ─────────────────────────────────────────────
+
+with app.app_context():
+    # Initialize database tables and seed default data
+    init_db()
+    seed_admin()
+    seed_settings()
+    try:
+        seed_sample_data()
+    except NameError:
+        pass  # In case seed_sample_data doesn't exist or is removed
+
+# ─────────────────────────────────────────────
 # Entry Point
 # ─────────────────────────────────────────────
 
@@ -1552,12 +1566,6 @@ if __name__ == "__main__":
     print("  Face Recognition Student App")
     print("  http://127.0.0.1:5000")
     print("=" * 50)
-
-    # Initialize database tables and seed default data
-    init_db()
-    seed_admin()
-    seed_settings()
-    seed_sample_data()
 
     # Run Flask in debug mode for development
     app.run(debug=True, host="0.0.0.0", port=5000)
