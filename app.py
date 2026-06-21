@@ -50,6 +50,17 @@ FACE_THRESHOLD = 0.18        # tuned for spatial grid LBP histogram cosine simil
 app = Flask(__name__)
 app.secret_key = "face-recognition-secret-key"
 
+import traceback
+from werkzeug.exceptions import HTTPException
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return e
+    # Now you're handling non-HTTP exceptions only
+    return f"Internal Server Error: {e}<br><pre>{traceback.format_exc()}</pre>", 500
+
 # Directories
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 
