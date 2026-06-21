@@ -76,7 +76,20 @@ try:
     import firebase_admin
     from firebase_admin import credentials, firestore, storage
     
-    if os.path.exists(FIREBASE_KEY_FILE):
+    # Check if credentials are in an environment variable (for Vercel)
+    firebase_env = os.environ.get("FIREBASE_CREDENTIALS")
+    
+    if firebase_env:
+        cred_dict = json.loads(firebase_env)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': 'recognition-app-8770b.firebasestorage.app'
+        })
+        firestore_db = firestore.client()
+        storage_bucket = storage.bucket()
+        FIREBASE_ACTIVE = True
+        print("[Firebase] Cloud sync initialized successfully using FIREBASE_CREDENTIALS env var.")
+    elif os.path.exists(FIREBASE_KEY_FILE):
         cred = credentials.Certificate(FIREBASE_KEY_FILE)
         firebase_admin.initialize_app(cred, {
             'storageBucket': 'recognition-app-8770b.firebasestorage.app'
@@ -86,7 +99,7 @@ try:
         FIREBASE_ACTIVE = True
         print("[Firebase] Cloud sync initialized successfully using firebase-service-key.json.")
     else:
-        print("[Firebase] Credentials file 'firebase-service-key.json' not found. Operating in Local Mode (SQLite).")
+        print("[Firebase] Credentials not found. Operating in Local Mode (SQLite).")
 except Exception as e:
     print(f"[Firebase] Initialization failed: {e}")
 
