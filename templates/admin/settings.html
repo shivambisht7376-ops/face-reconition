@@ -1,10 +1,16 @@
-{% extends "base.html" %}
+{% extends "admin/base_admin.html" %}
 
-{% block title %}Admin Settings — FaceID System{% endblock %}
-{% block page_title %}Admin Settings{% endblock %}
+{% block admin_title %}Admin Settings{% endblock %}
 
-{% block content %}
+{% block admin_content %}
 <div class="settings-wrap">
+
+    <div class="dash-header" style="margin-bottom: 2rem;">
+        <div>
+            <h2 style="font-weight: 600; color: var(--text-color);">System Settings</h2>
+            <p style="color: var(--text-muted);">Configure display preferences and manage administrators</p>
+        </div>
+    </div>
 
     <div class="settings-grid">
 
@@ -78,9 +84,41 @@
 
         <!-- ── Info / Preview Panel ────────────────── -->
         <div class="settings-info-col">
+            
+            <!-- Administrator Management -->
+            <div class="panel-card info-box">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                    <h4 style="font-size:0.95rem; margin:0;">🛡️ Administrators</h4>
+                    <a href="{{ url_for('auth_signup') }}" class="btn btn-primary btn-sm" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Add Admin</a>
+                </div>
+                
+                <div style="max-height: 200px; overflow-y: auto;">
+                    {% if admins %}
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                        {% for admin in admins %}
+                            <li style="display:flex; justify-content:space-between; align-items:center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                                <div style="display:flex; flex-direction:column;">
+                                    <span style="font-weight: 500; font-size: 0.9rem;">{{ admin['username'] }}</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted);">{{ admin['email'] }}</span>
+                                </div>
+                                {% if admin['id']|string != current_user.id %}
+                                <form action="{{ url_for('admin_delete_admin', admin_id=admin['id']) }}" method="POST" onsubmit="return confirm('Remove admin {{ admin['username'] }}?');">
+                                    <button type="submit" class="btn btn-danger btn-xs" style="padding:0.2rem 0.4rem; background: transparent; color: var(--danger-color); border:none;">Remove</button>
+                                </form>
+                                {% else %}
+                                <span style="font-size: 0.75rem; color: var(--primary); font-weight: 500; padding: 0.2rem 0.4rem; background: rgba(99, 102, 241, 0.1); border-radius: 4px;">You</span>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">No administrators found.</p>
+                    {% endif %}
+                </div>
+            </div>
 
             <!-- Preview Card -->
-            <div class="panel-card preview-card">
+            <div class="panel-card preview-card" style="margin-top: 1rem;">
                 <h4 class="panel-title" style="font-size:0.95rem;">
                     👁 Result Card Preview
                 </h4>
@@ -103,14 +141,14 @@
 
             <!-- Firebase Sync Box -->
             {% if firebase_active %}
-            <div class="panel-card info-box" style="border-left: 4px solid var(--success); background: #f0fdf4;">
+            <div class="panel-card info-box" style="border-left: 4px solid var(--success); background: #f0fdf4; margin-top: 1rem;">
                 <h4 style="font-size:0.95rem; margin-bottom:0.6rem; color: #166534;">☁️ Firebase Connected</h4>
                 <p style="font-size:0.82rem; color:#15803d; line-height: 1.6; margin: 0;">
                     The application is currently connected to Firebase. All student details, face encodings, display configurations, and recognition logs are securely synchronized with Firestore and Firebase Storage.
                 </p>
             </div>
             {% else %}
-            <div class="panel-card info-box instruction-card">
+            <div class="panel-card info-box instruction-card" style="margin-top: 1rem;">
                 <h4 style="font-size:0.95rem; margin-bottom:0.6rem;">☁️ Connect Firebase Cloud</h4>
                 <p style="font-size:0.82rem; color:var(--text-muted); line-height: 1.6; margin: 0;">
                     To enable database and image synchronization with Firebase:
@@ -126,18 +164,6 @@
                 </ol>
             </div>
             {% endif %}
-
-            <!-- About Settings Box -->
-            <div class="panel-card info-box">
-                <h4 style="font-size:0.95rem; margin-bottom:0.6rem;">ℹ️ About Settings</h4>
-                <ul style="font-size:0.82rem; color:var(--text-muted); line-height:1.7; padding-left:1rem; margin: 0;">
-                    <li>Settings are saved in {% if firebase_active %}Firebase Firestore{% else %}the local SQLite database{% endif %}.</li>
-                    <li>Turning a field <strong>OFF</strong> hides it from the recognition result page.</li>
-                    <li><strong>Name</strong> is the primary identifier — recommended to keep it ON.</li>
-                    <li>Changes apply immediately to all new recognition scans.</li>
-                </ul>
-            </div>
-
 
         </div>
 

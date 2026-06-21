@@ -11,6 +11,19 @@
         <div class="welcome-text">
             <h2>Welcome to FaceID System 👋</h2>
             <p>A face recognition system for college projects. Start by registering students or launch the live recognition camera.</p>
+            <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                {% if firebase_active %}
+                <span class="db-badge active-badge" title="Syncing data with Firebase Firestore and Storage in real-time.">
+                    <span class="db-indicator active-dot"></span>
+                    ☁️ Cloud Sync Active (Firebase)
+                </span>
+                {% else %}
+                <span class="db-badge fallback-badge" title="Operating offline with SQLite database and local image folder. Put firebase-service-key.json in project root to enable cloud sync.">
+                    <span class="db-indicator fallback-dot"></span>
+                    💾 Local Mode (SQLite)
+                </span>
+                {% endif %}
+            </div>
         </div>
         <div class="welcome-illustration">
             <svg width="90" height="90" viewBox="0 0 100 100" fill="none">

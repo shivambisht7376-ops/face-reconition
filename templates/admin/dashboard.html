@@ -1,0 +1,178 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}Admin Dashboard{% endblock %}
+
+{% block admin_content %}
+<div class="admin-dashboard-wrap">
+    <!-- ── Welcome and Status Row ───────────────── -->
+    <div class="welcome-banner admin-banner">
+        <div class="welcome-text">
+            <h2>Admin Control Center ⚡</h2>
+            <p>Welcome back, <strong>{{ current_user.username }}</strong>. Manage registered students, examine recognition logs, and customize display settings.</p>
+        </div>
+        <div class="welcome-illustration">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <circle cx="12" cy="11" r="3"/>
+                <path d="M12 14a4 4 0 0 0-4 4h8a4 4 0 0 0-4-4z"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- ── Stats Cards Grid ─────────────────────── -->
+    <div class="stats-grid">
+        <div class="stat-card stat-blue">
+            <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Students</span>
+                <span class="stat-value">{{ total_people }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card stat-green">
+            <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Recognized Today</span>
+                <span class="stat-value">{{ recognized_today }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card stat-amber">
+            <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Unknown Today</span>
+                <span class="stat-value">{{ unknown_today }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card stat-purple">
+            <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <circle cx="12" cy="11" r="3"/>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Admin Accounts</span>
+                <span class="stat-value">{{ total_admins }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-details-grid">
+        <!-- ── Trend Chart (Last 7 Days) ───────────── -->
+        <div class="dashboard-card chart-card">
+            <div class="card-header">
+                <h3>Recognition Trend (Last 7 Days)</h3>
+            </div>
+            <div class="card-body chart-container">
+                {% if trend_data %}
+                <div class="bar-chart">
+                    {% for day in trend_data %}
+                        {% set total_day = day.recognized + day.unknown %}
+                        {% set rec_percent = (day.recognized / total_day * 100) if total_day > 0 else 0 %}
+                        {% set unk_percent = (day.unknown / total_day * 100) if total_day > 0 else 0 %}
+                        
+                        <div class="chart-column">
+                            <div class="column-bars">
+                                {% if total_day > 0 %}
+                                    <div class="bar bar-recognized" style="height: {{ rec_percent }}%;" title="Recognized: {{ day.recognized }}"></div>
+                                    <div class="bar bar-unknown" style="height: {{ unk_percent }}%;" title="Unknown: {{ day.unknown }}"></div>
+                                {% else %}
+                                    <div class="bar bar-empty" style="height: 4%;" title="No activity"></div>
+                                {% endif %}
+                            </div>
+                            <span class="column-label">{{ day.day[5:] }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item"><span class="legend-dot dot-rec"></span> Recognized</div>
+                    <div class="legend-item"><span class="legend-dot dot-unk"></span> Unknown</div>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M12 20V10M18 20V4M6 20v-6"/>
+                    </svg>
+                    <p>No activity logs found for the last 7 days.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── Recent Activity Feed ────────────────── -->
+        <div class="dashboard-card activity-card">
+            <div class="card-header">
+                <h3>Recent Activity</h3>
+                <a href="{{ url_for('admin_logs') }}" class="btn-link">View Logs &rarr;</a>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                <div class="activity-list">
+                    {% for log in recent_logs %}
+                    <div class="activity-item">
+                        <div class="activity-icon {% if log.recognized %}rec-success{% else %}rec-danger{% endif %}">
+                            {% if log.recognized %}
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                            {% else %}
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            {% endif %}
+                        </div>
+                        <div class="activity-details">
+                            <span class="activity-text">
+                                {% if log.recognized %}
+                                    Matched student <strong>{{ log.name }}</strong> ({{ log.student_id }})
+                                {% else %}
+                                    <strong>Unknown face</strong> detected
+                                {% endif %}
+                            </span>
+                            <span class="activity-time" data-utc="{{ log.logged_at }}">{{ log.logged_at }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                    <p>No recent recognition events recorded.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+    // Format timestamp strings dynamically
+    document.querySelectorAll('.activity-time').forEach(el => {
+        const utcStr = el.getAttribute('data-utc');
+        if (utcStr) {
+            const dt = new Date(utcStr.replace(" ", "T") + "Z");
+            if (!isNaN(dt.getTime())) {
+                el.textContent = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ' - ' + dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+            }
+        }
+    });
+</script>
+{% endblock %}

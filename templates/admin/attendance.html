@@ -1,0 +1,377 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}Attendance System{% endblock %}
+
+{% block admin_content %}
+<div class="attendance-wrap">
+
+    <!-- ── Page Header ──────────────────────────────── -->
+    <div class="att-page-header">
+        <div>
+            <h2 class="att-page-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:-5px;margin-right:8px;color:var(--primary)">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Attendance System
+            </h2>
+            <p style="color:var(--text-muted);font-size:.88rem;margin-top:4px;">Track daily & hourly student attendance from face recognition events</p>
+        </div>
+    </div>
+
+    <!-- ── Stat Summary Badges ──────────────────────── -->
+    <div class="att-stats-row">
+        <div class="att-stat-card att-stat-blue">
+            <div class="att-stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="att-stat-info">
+                <span class="att-stat-label">Total Students</span>
+                <span class="att-stat-value" id="stat-total">{{ total_students }}</span>
+            </div>
+        </div>
+
+        <div class="att-stat-card att-stat-green">
+            <div class="att-stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="att-stat-info">
+                <span class="att-stat-label">Present Today</span>
+                <span class="att-stat-value" id="stat-present" style="color:var(--success)">{{ present_count }}</span>
+            </div>
+        </div>
+
+        <div class="att-stat-card att-stat-red">
+            <div class="att-stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div class="att-stat-info">
+                <span class="att-stat-label">Absent</span>
+                <span class="att-stat-value" id="stat-absent" style="color:var(--danger)">{{ absent_count }}</span>
+            </div>
+        </div>
+
+        <div class="att-stat-card att-stat-purple">
+            <div class="att-stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div class="att-stat-info">
+                <span class="att-stat-label">Attendance Rate</span>
+                <span class="att-stat-value" id="stat-rate" style="color:#7c3aed">
+                    {% if total_students > 0 %}{{ ((present_count / total_students) * 100)|round(1) }}%{% else %}—{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Filter / Control Bar ──────────────────────── -->
+    <div class="panel-card att-controls">
+        <form method="GET" action="{{ url_for('admin_attendance') }}" id="att-filter-form" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+
+            <div class="form-group" style="margin-bottom:0;min-width:160px;">
+                <label class="form-label" for="date-picker">📅 Date</label>
+                <input type="date" id="date-picker" name="date" class="form-input"
+                       value="{{ selected_date }}"
+                       max="{{ selected_date }}"
+                       onchange="this.form.submit()" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;min-width:180px;">
+                <label class="form-label" for="dept-filter">🏛️ Department</label>
+                <select id="dept-filter" name="department" class="form-input form-select" onchange="this.form.submit()">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept }}" {% if dept == dept_filter %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if dept_filter %}
+            <div style="margin-bottom:0.1rem;">
+                <a href="{{ url_for('admin_attendance', date=selected_date) }}" class="btn btn-ghost btn-sm" style="color:var(--danger)">✕ Clear</a>
+            </div>
+            {% endif %}
+
+            <div style="margin-left:auto;display:flex;gap:0.6rem;align-items:center;margin-bottom:0.1rem;">
+                <a href="{{ url_for('admin_attendance_export', date=selected_date, department=dept_filter) }}"
+                   class="btn btn-secondary btn-sm" id="btn-export-csv">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export CSV
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── Charts Row ────────────────────────────────── -->
+    <div class="att-charts-row">
+
+        <!-- Hourly Heatmap Chart -->
+        <div class="panel-card att-chart-card">
+            <div class="att-chart-header">
+                <h3>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--primary)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Hourly Activity — {{ selected_date }}
+                </h3>
+                <span class="att-chart-sub">Unique students recognized per hour</span>
+            </div>
+            <div class="att-hourly-chart" id="hourly-chart">
+                <div class="att-chart-loading">Loading chart…</div>
+            </div>
+            <div class="att-hourly-labels" id="hourly-labels"></div>
+        </div>
+
+        <!-- 30-Day Trend Chart -->
+        <div class="panel-card att-chart-card">
+            <div class="att-chart-header">
+                <h3>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--primary)"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    30-Day Attendance Trend
+                </h3>
+                <span class="att-chart-sub">Unique students present each day</span>
+            </div>
+            <div class="att-trend-chart" id="trend-chart">
+                <div class="att-chart-loading">Loading chart…</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Attendance Table ───────────────────────────── -->
+    <div class="panel-card" style="padding:0;overflow:hidden;">
+
+        <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <div>
+                <h3 style="font-size:1rem;font-weight:700;color:var(--text);">Student Attendance — {{ selected_date }}</h3>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">
+                    Showing {{ attendance|length }} of {{ total_students }} students
+                    {% if dept_filter %}· <em>{{ dept_filter }}</em>{% endif %}
+                </p>
+            </div>
+            <div style="display:flex;gap:0.5rem;">
+                <span class="att-legend-dot" style="background:var(--success)"></span><span style="font-size:.78rem;color:var(--text-muted);margin-right:.5rem;">Present</span>
+                <span class="att-legend-dot" style="background:var(--danger)"></span><span style="font-size:.78rem;color:var(--text-muted);">Absent</span>
+            </div>
+        </div>
+
+        {% if attendance %}
+        <div class="table-wrap" style="border-radius:0;border:none;box-shadow:none;">
+            <table class="persons-table" role="grid" style="width:100%">
+                <thead>
+                    <tr>
+                        <th style="padding-left:24px;">#</th>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>First Check-in</th>
+                        <th>Total Scans</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in attendance %}
+                    <tr class="att-row {% if row.present %}att-row-present{% else %}att-row-absent{% endif %}">
+                        <td style="padding-left:24px;color:var(--text-muted);font-size:.8rem;">{{ loop.index + (page - 1) * per_page }}</td>
+
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                {% if row.image_path %}
+                                <div class="att-avatar" style="background-image:url('{{ url_for("static", filename=row.image_path) }}');"></div>
+                                {% else %}
+                                <div class="att-avatar att-avatar-initials">{{ row.name[0].upper() }}</div>
+                                {% endif %}
+                                <span style="font-weight:600;color:var(--text);">{{ row.name }}</span>
+                            </div>
+                        </td>
+
+                        <td><code class="code-badge">{{ row.student_id }}</code></td>
+
+                        <td style="color:var(--text-muted);font-size:.85rem;">{{ row.department }}</td>
+
+                        <td>
+                            {% if row.present %}
+                            <span class="att-status-badge att-status-present">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                                Present
+                            </span>
+                            {% else %}
+                            <span class="att-status-badge att-status-absent">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Absent
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <td style="font-size:.85rem;color:var(--text);">
+                            {% if row.first_seen %}
+                            <span class="att-time-badge" data-utc="{{ row.first_seen }}">{{ row.first_seen[11:19] }}</span>
+                            {% else %}
+                            <span style="color:var(--text-light);">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if row.scan_count > 0 %}
+                            <span class="att-scan-count">{{ row.scan_count }}</span>
+                            {% else %}
+                            <span style="color:var(--text-light);">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div style="display:flex;justify-content:center;padding:1.2rem;gap:.5rem;border-top:1px solid var(--border);">
+            {% if page > 1 %}
+            <a href="{{ url_for('admin_attendance', page=page-1, date=selected_date, department=dept_filter) }}" class="btn btn-secondary btn-sm">&larr; Previous</a>
+            {% endif %}
+            <span style="padding:.4rem 1rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);font-size:.9rem;">
+                Page {{ page }} of {{ total_pages }}
+            </span>
+            {% if page < total_pages %}
+            <a href="{{ url_for('admin_attendance', page=page+1, date=selected_date, department=dept_filter) }}" class="btn btn-secondary btn-sm">Next &rarr;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="color:var(--text-muted)">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <h3>No students found</h3>
+            <p>Register students first, or adjust the filters above.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+
+{% block admin_scripts %}
+<script>
+// ─── Chart Data & Config ──────────────────────────────
+const SELECTED_DATE = "{{ selected_date }}";
+const TOTAL_STUDENTS = {{ total_students }};
+
+// ─── Hourly Heatmap Chart ─────────────────────────────
+async function renderHourlyChart() {
+    const container = document.getElementById('hourly-chart');
+    const labelsEl  = document.getElementById('hourly-labels');
+    try {
+        const res  = await fetch(`/api/attendance/hourly?date=${SELECTED_DATE}`);
+        const data = await res.json();
+
+        const maxVal = Math.max(...data.map(d => d.count), 1);
+
+        container.innerHTML = '';
+        labelsEl.innerHTML  = '';
+
+        data.forEach(d => {
+            // Bar
+            const barWrap = document.createElement('div');
+            barWrap.className = 'att-hour-col';
+
+            const bar = document.createElement('div');
+            bar.className = 'att-hour-bar';
+            const pct = (d.count / maxVal) * 100;
+            bar.style.height = Math.max(pct, d.count > 0 ? 6 : 2) + '%';
+            bar.style.background = d.count > 0
+                ? `linear-gradient(180deg, #2563EB, #60a5fa)`
+                : 'var(--border)';
+            bar.title = `${String(d.hour).padStart(2,'0')}:00 — ${d.count} student${d.count !== 1 ? 's' : ''}`;
+            if (d.count > 0) bar.setAttribute('data-count', d.count);
+
+            barWrap.appendChild(bar);
+            container.appendChild(barWrap);
+
+            // Label (every 3 hours)
+            const lbl = document.createElement('span');
+            lbl.className = 'att-hour-label';
+            lbl.textContent = d.hour % 3 === 0 ? String(d.hour).padStart(2,'0') : '';
+            labelsEl.appendChild(lbl);
+        });
+    } catch (e) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;">Could not load hourly data.</div>';
+    }
+}
+
+// ─── 30-Day Trend Chart ───────────────────────────────
+async function renderTrendChart() {
+    const container = document.getElementById('trend-chart');
+    try {
+        const res  = await fetch('/api/attendance/daily');
+        const data = await res.json();
+
+        if (!data.length) {
+            container.innerHTML = `<div class="empty-state" style="padding:2rem;">
+                <p>No attendance data for the last 30 days.</p></div>`;
+            return;
+        }
+
+        const maxVal = Math.max(...data.map(d => d.present), 1);
+        container.innerHTML = '';
+
+        const chart = document.createElement('div');
+        chart.className = 'att-trend-bars';
+
+        data.forEach(d => {
+            const col = document.createElement('div');
+            col.className = 'att-trend-col';
+
+            const bar = document.createElement('div');
+            bar.className = 'att-trend-bar';
+            const pct = (d.present / maxVal) * 100;
+            bar.style.height = Math.max(pct, d.present > 0 ? 4 : 1) + '%';
+            bar.style.background = d.day === SELECTED_DATE
+                ? 'linear-gradient(180deg, #f59e0b, #fbbf24)'
+                : 'linear-gradient(180deg, #2563EB, #60a5fa)';
+            bar.title = `${d.day}: ${d.present} present`;
+
+            const lbl = document.createElement('span');
+            lbl.className = 'att-trend-label';
+            lbl.textContent = d.day.slice(8); // day number
+
+            col.appendChild(bar);
+            col.appendChild(lbl);
+            chart.appendChild(col);
+        });
+
+        container.appendChild(chart);
+
+        // Legend
+        const legend = document.createElement('div');
+        legend.className = 'att-trend-legend';
+        legend.innerHTML = `
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:.75rem;color:var(--text-muted);">
+                <span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#2563EB,#60a5fa);display:inline-block;"></span> Other days
+            </span>
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:.75rem;color:var(--text-muted);">
+                <span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#f59e0b,#fbbf24);display:inline-block;"></span> Selected date
+            </span>`;
+        container.appendChild(legend);
+
+    } catch (e) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;">Could not load trend data.</div>';
+    }
+}
+
+// ─── Format UTC timestamps ────────────────────────────
+document.querySelectorAll('.att-time-badge[data-utc]').forEach(el => {
+    const raw = el.getAttribute('data-utc');
+    if (raw) {
+        const dt = new Date(raw.replace(' ', 'T') + (raw.includes('T') ? '' : 'Z'));
+        if (!isNaN(dt.getTime())) {
+            el.textContent = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+    }
+});
+
+// ─── Init ─────────────────────────────────────────────
+renderHourlyChart();
+renderTrendChart();
+</script>
+{% endblock %}

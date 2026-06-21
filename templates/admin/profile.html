@@ -1,0 +1,80 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}My Profile{% endblock %}
+
+{% block admin_content %}
+<div class="admin-dashboard-wrap" style="max-width: 800px; margin: 0 auto;">
+
+    <div class="dash-header" style="margin-bottom: 2rem;">
+        <div>
+            <h2 style="font-weight: 600; color: var(--text-color);">My Profile</h2>
+            <p style="color: var(--text-muted);">Manage your account details and password</p>
+        </div>
+    </div>
+
+    <!-- Update Profile Info -->
+    <div class="panel-card" style="margin-bottom: 2rem;">
+        <h3 class="panel-title" style="margin-bottom: 1.5rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Personal Information
+        </h3>
+        
+        <form method="POST" action="{{ url_for('admin_profile') }}">
+            <input type="hidden" name="action" value="update_name">
+            
+            <div class="form-group">
+                <label class="form-label">Email Address (Read-Only)</label>
+                <input type="email" class="form-input" value="{{ current_user.email }}" disabled style="background: var(--bg-color); cursor: not-allowed; color: var(--text-muted);">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="username">Display Name</label>
+                <input type="text" id="username" name="username" class="form-input" value="{{ current_user.username }}" required>
+            </div>
+
+            <div style="text-align: right;">
+                <button type="submit" class="btn btn-primary">Update Profile</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Change Password -->
+    <div class="panel-card">
+        <h3 class="panel-title" style="margin-bottom: 1.5rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Change Password
+        </h3>
+
+        <form method="POST" action="{{ url_for('admin_profile') }}">
+            <input type="hidden" name="action" value="update_password">
+
+            <div class="form-group">
+                <label class="form-label" for="current_password">Current Password</label>
+                <input type="password" id="current_password" name="current_password" class="form-input" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" class="form-input" required minlength="8" placeholder="Min. 8 characters">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="confirm_password">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-input" required minlength="8">
+                </div>
+            </div>
+
+            <div style="text-align: right;">
+                <button type="submit" class="btn btn-primary">Change Password</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

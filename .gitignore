@@ -32,5 +32,9 @@ Thumbs.db
 # Face recognition model files (large binaries)
 *.dat
 *.xml
+*.task
 shape_predictor_*.dat
 dlib_face_recognition_resnet_model_v1.dat
+
+# Uploads
+static/uploads/

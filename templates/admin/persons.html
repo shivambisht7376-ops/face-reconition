@@ -1,0 +1,105 @@
+{% extends "admin/base_admin.html" %}
+
+{% block admin_title %}Registered Persons{% endblock %}
+
+{% block admin_content %}
+<div class="admin-dashboard-wrap">
+    <div class="dash-header">
+        <div>
+            <h2 style="font-weight: 600; color: var(--text-color);">Registered Persons</h2>
+            <p style="color: var(--text-muted);">Manage all enrolled individuals in the FaceID system</p>
+        </div>
+        <a href="{{ url_for('admin_register') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add New Person
+        </a>
+    </div>
+
+    <!-- Search / Filter Area -->
+    <div class="panel-card" style="margin-bottom: 2rem;">
+        <form method="GET" action="{{ url_for('admin_persons') }}" style="display: flex; gap: 1rem; align-items: center;">
+            <input type="text" name="q" value="{{ query or '' }}" placeholder="Search by name, student ID, or department..." class="form-control" style="flex: 1;">
+            <button type="submit" class="btn btn-secondary">Search</button>
+            {% if query %}
+            <a href="{{ url_for('admin_persons') }}" class="btn btn-danger" style="background: transparent; color: var(--danger-color); border: none;">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    {% if people %}
+    <div class="table-wrap">
+        <table class="persons-table" role="grid" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Student ID</th>
+                    <th>Department</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>Registered On</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in people %}
+                <tr>
+                    <td class="cell-id">{{ p['id'] }}</td>
+                    <td class="cell-name" style="font-weight: 500; color: var(--text-color);">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="person-avatar-sm" style="width:32px; height:32px; border-radius:50%; background:var(--primary-color); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold;">
+                                {{ p['name'][0].upper() }}
+                            </span>
+                            {{ p['name'] }}
+                        </div>
+                    </td>
+                    <td><code class="code-badge">{{ p['student_id'] or '—' }}</code></td>
+                    <td>{{ p['department'] or '—' }}</td>
+                    <td>{{ p['mobile'] or '—' }}</td>
+                    <td>{{ p['email'] or '—' }}</td>
+                    <td class="cell-date" style="color: var(--text-muted); font-size:0.9em;">
+                        {{ p['created_at'][:10] if p['created_at'] else '—' }}
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:0.5rem;">
+                            <form method="POST" action="{{ url_for('admin_delete_person', person_id=p['id']) }}" onsubmit="return confirm('Delete {{ p['name'] | replace("'", "") }}? This cannot be undone.')">
+                                <button type="submit" class="btn btn-danger btn-xs" title="Delete person" style="padding: 0.4rem; background: rgba(239, 68, 68, 0.1); color: var(--danger-color); border:none;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                        <path d="M10 11v6"/><path d="M14 11v6"/>
+                                        <path d="M9 6V4h6v2"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="color: var(--text-muted); margin-bottom: 1rem;">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <h3>No persons found</h3>
+        <p style="color: var(--text-muted);">
+            {% if query %}
+            No results match your search for "{{ query }}".
+            {% else %}
+            The system currently has no registered individuals.
+            {% endif %}
+        </p>
+        {% if not query %}
+        <a href="{{ url_for('admin_register') }}" class="btn btn-primary" style="margin-top:1rem;">Register First Person</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

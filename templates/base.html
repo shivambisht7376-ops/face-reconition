@@ -51,39 +51,89 @@
                 Recognize
             </a>
 
-            <a href="{{ url_for('register') }}"
-               class="nav-item {% if request.endpoint == 'register' %}active{% endif %}"
-               id="nav-register">
+            {% if current_user.is_authenticated %}
+            <div class="sidebar-section-title">Administration</div>
+
+            <a href="{{ url_for('admin_dashboard') }}"
+               class="nav-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
+               id="nav-admin-dashboard">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                Admin Panel
+            </a>
+
+            <a href="{{ url_for('admin_register') }}"
+               class="nav-item {% if request.endpoint == 'admin_register' %}active{% endif %}"
+               id="nav-admin-register">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
                     <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
                 </svg>
-                Register
+                Register Student
             </a>
 
-            <a href="{{ url_for('persons') }}"
-               class="nav-item {% if request.endpoint == 'persons' %}active{% endif %}"
-               id="nav-persons">
+            <a href="{{ url_for('admin_persons') }}"
+               class="nav-item {% if request.endpoint == 'admin_persons' %}active{% endif %}"
+               id="nav-admin-persons">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                 </svg>
-                All Persons
+                Manage Students
             </a>
 
-            <a href="{{ url_for('settings') }}"
-               class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}"
-               id="nav-settings">
+            <a href="{{ url_for('admin_attendance') }}"
+               class="nav-item {% if request.endpoint in ['admin_attendance', 'admin_attendance_export'] %}active{% endif %}"
+               id="nav-admin-attendance">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
+                </svg>
+                Attendance
+            </a>
+
+            <a href="{{ url_for('admin_logs') }}"
+               class="nav-item {% if request.endpoint == 'admin_logs' %}active{% endif %}"
+               id="nav-admin-logs">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                Recognition Logs
+            </a>
+
+            <a href="{{ url_for('admin_settings') }}"
+               class="nav-item {% if request.endpoint == 'admin_settings' %}active{% endif %}"
+               id="nav-admin-settings">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
                     <path d="M12 2v2m0 18v-2m10-8h-2M4 12H2m15.07-7.07-1.41 1.41M8.34 15.66l-1.41 1.41M18.66 15.66l-1.41-1.41M6.75 6.75 5.34 5.34"/>
                 </svg>
-                Admin Settings
+                System Settings
             </a>
+
+            <a href="{{ url_for('admin_profile') }}"
+               class="nav-item {% if request.endpoint == 'admin_profile' %}active{% endif %}"
+               id="nav-admin-profile">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                My Profile
+            </a>
+            {% endif %}
         </nav>
 
         <div class="sidebar-footer">
@@ -106,6 +156,28 @@
             <h1 class="topbar-title">{% block page_title %}Dashboard{% endblock %}</h1>
             <div class="topbar-right">
                 <span class="topbar-time" id="topbar-clock"></span>
+                {% if current_user.is_authenticated %}
+                    <span class="topbar-user" title="Logged in as {{ current_user.email }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        {{ current_user.username }}
+                    </span>
+                    <a href="{{ url_for('auth_logout') }}" class="btn-topbar btn-logout" title="Log Out">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+                        </svg>
+                        Logout
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('auth_login') }}" class="btn-topbar btn-login">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+                        </svg>
+                        Admin Login
+                    </a>
+                {% endif %}
             </div>
         </header>
 
@@ -163,6 +235,33 @@
         }, 5000);
     </script>
 
+    <!-- Firebase Web SDK Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDC8WSPeDT83sWlEd2eCiuDoYYre2MAho4",
+            authDomain: "recognition-app-8770b.firebaseapp.com",
+            projectId: "recognition-app-8770b",
+            storageBucket: "recognition-app-8770b.firebasestorage.app",
+            messagingSenderId: "76396308725",
+            appId: "1:76396308725:web:5fc91b84377386926c7dbc",
+            measurementId: "G-X01DGL2SB3"
+        };
+
+        try {
+            // Initialize Firebase
+            const app = initializeApp(firebaseConfig);
+            const analytics = getAnalytics(app);
+            console.log("[Firebase] Web Client SDK initialized successfully.");
+        } catch (e) {
+            console.warn("[Firebase] Client initialization failed:", e);
+        }
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
 </html>
+

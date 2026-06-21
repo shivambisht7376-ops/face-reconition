@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}{% block admin_title %}Admin Panel{% endblock %} — FaceID System{% endblock %}
+
+{% block page_title %}{{ self.admin_title() }}{% endblock %}
+
+{% block content %}
+    {% block admin_content %}{% endblock %}
+{% endblock %}
+
+{% block scripts %}
+    {% block admin_scripts %}{% endblock %}
+{% endblock %}

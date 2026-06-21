@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Admin — FaceID System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}" />
+</head>
+<body class="auth-body">
+
+<div class="auth-container">
+
+    <!-- ── Left Panel: Branding ─────────────── -->
+    <div class="auth-left">
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+                </svg>
+            </div>
+            <span class="auth-logo-text">FaceID</span>
+        </div>
+
+        <div class="auth-hero">
+            <div class="auth-face-icon" style="animation: none;">
+                <svg viewBox="0 0 120 120" fill="none">
+                    <path d="M10 30 L10 10 L30 10" stroke="rgba(255,255,255,0.8)" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M90 10 L110 10 L110 30" stroke="rgba(255,255,255,0.8)" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M10 90 L10 110 L30 110" stroke="rgba(255,255,255,0.8)" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M90 110 L110 110 L110 90" stroke="rgba(255,255,255,0.8)" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="60" cy="48" r="22" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="rgba(255,255,255,0.1)"/>
+                    <circle cx="52" cy="44" r="3" fill="rgba(255,255,255,0.7)"/>
+                    <circle cx="68" cy="44" r="3" fill="rgba(255,255,255,0.7)"/>
+                    <path d="M52 56 Q60 63 68 56" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" fill="none"/>
+                    <!-- Plus icon for signup -->
+                    <circle cx="90" cy="88" r="14" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+                    <line x1="90" y1="82" x2="90" y2="94" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                    <line x1="84" y1="88" x2="96" y2="88" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h1>Create Admin Account</h1>
+            <p>Add a new administrator to manage the FaceID recognition system.</p>
+
+            <div class="auth-features">
+                <div class="auth-feature">
+                    <span class="feature-dot green"></span>
+                    Full admin dashboard access
+                </div>
+                <div class="auth-feature">
+                    <span class="feature-dot blue"></span>
+                    Manage students & recognition logs
+                </div>
+                <div class="auth-feature">
+                    <span class="feature-dot purple"></span>
+                    Configure display settings
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Right Panel: Signup Form ─────────── -->
+    <div class="auth-right">
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <h2>New Admin Account</h2>
+                <p>Fill in the details to create an administrator</p>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="auth-alerts">
+                {% for category, message in messages %}
+                <div class="auth-alert auth-alert-{{ category }}">
+                    {% if category == 'danger' %}⚠️{% elif category == 'success' %}✅{% else %}ℹ️{% endif %}
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('auth_signup') }}" class="auth-form" id="signup-form">
+                <div class="auth-field">
+                    <label for="username" class="auth-label">Full Name</label>
+                    <div class="auth-input-wrap">
+                        <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <input type="text" id="username" name="username" class="auth-input"
+                               placeholder="John Doe" required />
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="email" class="auth-label">Email Address</label>
+                    <div class="auth-input-wrap">
+                        <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="4" width="20" height="16" rx="2"/>
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        </svg>
+                        <input type="email" id="email" name="email" class="auth-input"
+                               placeholder="admin@example.com" required />
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="password" class="auth-label">Password</label>
+                    <div class="auth-input-wrap">
+                        <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        <input type="password" id="password" name="password" class="auth-input"
+                               placeholder="Min. 8 characters" required minlength="8" />
+                        <button type="button" class="auth-pw-toggle" onclick="togglePw('password', this)" tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="confirm_password" class="auth-label">Confirm Password</label>
+                    <div class="auth-input-wrap">
+                        <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <input type="password" id="confirm_password" name="confirm_password" class="auth-input"
+                               placeholder="Repeat your password" required />
+                        <button type="button" class="auth-pw-toggle" onclick="togglePw('confirm_password', this)" tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-btn" id="signup-btn">
+                    <span>Create Admin Account</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </form>
+
+            <div class="auth-card-footer">
+                <p><a href="{{ url_for('admin_settings') }}" class="auth-link">← Back to Admin Settings</a></p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function togglePw(id, btn) {
+    const inp = document.getElementById(id);
+    const isText = inp.type === 'text';
+    inp.type = isText ? 'password' : 'text';
+    btn.innerHTML = isText
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+}
+
+// Password match validation
+document.getElementById('signup-form').addEventListener('submit', function(e) {
+    const pw  = document.getElementById('password').value;
+    const cpw = document.getElementById('confirm_password').value;
+    if (pw !== cpw) {
+        e.preventDefault();
+        alert('Passwords do not match!');
+        return;
+    }
+    const btn = document.getElementById('signup-btn');
+    btn.innerHTML = '<span>Creating…</span>';
+    btn.disabled = true;
+});
+</script>
+</body>
+</html>

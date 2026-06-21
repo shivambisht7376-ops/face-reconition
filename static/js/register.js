@@ -198,7 +198,7 @@ function prepareSubmit() {
     // Show loading state on button
     const btn = document.getElementById('btn-submit');
     btn.innerHTML = '⏳ Saving…';
-    btn.disabled  = true;
+    btn.style.pointerEvents = 'none'; // Prevent double-click without disabling the button
 
     return true;  // allow form submit
 }
