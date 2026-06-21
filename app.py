@@ -52,8 +52,14 @@ app.secret_key = "face-recognition-secret-key"
 
 # Directories
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR   = os.path.join(BASE_DIR, "static", "uploads")
-DATABASE     = os.path.join(BASE_DIR, "database.db")
+
+# Vercel Serverless environment uses a read-only filesystem except for /tmp
+if os.environ.get("VERCEL"):
+    UPLOAD_DIR = "/tmp/uploads"
+    DATABASE   = "/tmp/database.db"
+else:
+    UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads")
+    DATABASE   = os.path.join(BASE_DIR, "database.db")
 
 # Ensure upload folder exists
 os.makedirs(UPLOAD_DIR, exist_ok=True)
