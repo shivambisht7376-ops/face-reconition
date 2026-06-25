@@ -51,8 +51,20 @@
                 Recognize
             </a>
 
+            <a href="{{ url_for('student_dashboard') }}"
+               class="nav-item {% if request.endpoint == 'student_dashboard' %}active{% endif %}"
+               id="nav-student-portal">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+                Student Portal
+            </a>
+
             {% if current_user.is_authenticated %}
             <div class="sidebar-section-title">Administration</div>
+
 
             <a href="{{ url_for('admin_dashboard') }}"
                class="nav-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
@@ -162,9 +174,23 @@
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                             <circle cx="12" cy="7" r="4"/>
                         </svg>
-                        {{ current_user.username }}
+                        Admin: {{ current_user.username }}
                     </span>
                     <a href="{{ url_for('auth_logout') }}" class="btn-topbar btn-logout" title="Log Out">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+                        </svg>
+                        Logout
+                    </a>
+                {% elif session.get('student_id') %}
+                    <span class="topbar-user" title="Logged in as Student">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Student: {{ session.get('student_name') }}
+                    </span>
+                    <a href="{{ url_for('student_logout') }}" class="btn-topbar btn-logout" title="Log Out">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
                         </svg>

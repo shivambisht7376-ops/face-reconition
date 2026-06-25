@@ -154,6 +154,8 @@ def get_db():
     """Open a database connection and return it."""
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row   # rows behave like dicts
+    conn.execute("PRAGMA journal_mode=WAL")   # safer concurrent writes
+    conn.execute("PRAGMA foreign_keys=ON")    # enforce ON DELETE CASCADE
     return conn
 
 
@@ -218,8 +220,21 @@ def init_db():
         )
     """)
 
+    # Migration: add password_hash column to persons if not already present
+    cols = [row[1] for row in cur.execute("PRAGMA table_info(persons)").fetchall()]
+    if "password_hash" not in cols:
+        cur.execute("ALTER TABLE persons ADD COLUMN password_hash TEXT")
+
+    # Repair: clean up orphaned recognition_log entries whose person no longer exists
+    cur.execute("""
+        DELETE FROM recognition_log
+        WHERE person_id IS NOT NULL
+          AND person_id NOT IN (SELECT id FROM persons)
+    """)
+
     conn.commit()
     conn.close()
+
 
 
 def seed_admin():
@@ -756,13 +771,17 @@ def api_recognize():
 
 def log_recognition(person_id, recognized: bool):
     """Write an entry to recognition_log for dashboard stats."""
+    # Use local datetime (not UTC CURRENT_TIMESTAMP) so date comparisons
+    # in attendance queries match the server's local timezone (e.g. IST).
+    local_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     if FIREBASE_ACTIVE:
         try:
             doc_ref = firestore_db.collection("recognition_log").document()
             doc_ref.set({
                 "person_id": person_id,
                 "recognized": recognized,
-                "logged_at": datetime.now().isoformat()
+                "logged_at": local_now
             })
             return
         except Exception as e:
@@ -770,8 +789,8 @@ def log_recognition(person_id, recognized: bool):
 
     conn = get_db()
     conn.execute(
-        "INSERT INTO recognition_log (person_id, recognized) VALUES (?, ?)",
-        (person_id, 1 if recognized else 0)
+        "INSERT INTO recognition_log (person_id, recognized, logged_at) VALUES (?, ?, ?)",
+        (person_id, 1 if recognized else 0, local_now)
     )
     conn.commit()
     conn.close()
@@ -1016,6 +1035,7 @@ def admin_persons():
             "SELECT id, name, department, student_id, mobile, email, dob, created_at FROM persons ORDER BY id DESC"
         ).fetchall()
     conn.close()
+    print(f"[DEBUG admin_persons] Query: {q!r}, Fetched {len(people)} people.", flush=True)
     return render_template("admin/persons.html", people=people, query=q)
 
 
@@ -1079,6 +1099,7 @@ def admin_delete_person(person_id):
             if os.path.exists(img_file):
                 os.remove(img_file)
         conn.execute("DELETE FROM encodings WHERE person_id=?", (person_id,))
+        conn.execute("DELETE FROM recognition_log WHERE person_id=?", (person_id,))
         conn.execute("DELETE FROM persons WHERE id=?", (person_id,))
         conn.commit()
     conn.close()
@@ -1548,6 +1569,288 @@ def admin_attendance_export():
         mimetype="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# ─────────────────────────────────────────────
+# Routes — Student Portal (Public + Session Auth)
+# ─────────────────────────────────────────────
+
+def student_login_required(f):
+    """Decorator that redirects to student login if not logged in as a student."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "student_id" not in session:
+            flash("Please log in to view your dashboard.", "warning")
+            return redirect(url_for("student_login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/student")
+def student_dashboard():
+    """Public student portal — auto-loads dashboard if already logged in."""
+    if "student_id" in session:
+        return redirect(url_for("student_my_dashboard"))
+    return render_template("student_dashboard.html", logged_in=False)
+
+
+@app.route("/student/login", methods=["GET", "POST"])
+def student_login():
+    """Student login page — Student ID + password."""
+    if "student_id" in session:
+        return redirect(url_for("student_my_dashboard"))
+
+    if request.method == "POST":
+        sid      = request.form.get("student_id", "").strip()
+        password = request.form.get("password", "")
+
+        if not sid or not password:
+            flash("Both Student ID and password are required.", "danger")
+            return render_template("student_login.html")
+
+        conn = get_db()
+        person = conn.execute(
+            "SELECT id, name, student_id, password_hash FROM persons WHERE student_id = ?",
+            (sid,)
+        ).fetchone()
+        conn.close()
+
+        if not person:
+            flash("No student found with that Student ID.", "danger")
+            return render_template("student_login.html")
+
+        # Check password: if no password set yet, default is the Student ID itself
+        stored_hash = person["password_hash"]
+        if stored_hash:
+            valid = check_password_hash(stored_hash, password)
+        else:
+            # First login — default password is Student ID
+            valid = (password == person["student_id"])
+
+        if not valid:
+            flash("Incorrect password. Default password is your Student ID.", "danger")
+            return render_template("student_login.html")
+
+        # Set session
+        session["student_id"]   = person["id"]
+        session["student_name"] = person["name"]
+        session["student_sid"]  = person["student_id"]
+
+        # If no password has been set, set it now to the default so it's hashed
+        if not stored_hash:
+            conn = get_db()
+            conn.execute(
+                "UPDATE persons SET password_hash=? WHERE id=?",
+                (generate_password_hash(person["student_id"]), person["id"])
+            )
+            conn.commit()
+            conn.close()
+
+        flash(f"Welcome, {person['name']}! 👋", "success")
+        return redirect(url_for("student_my_dashboard"))
+
+    return render_template("student_login.html")
+
+
+@app.route("/student/logout")
+def student_logout():
+    """Log out the current student."""
+    session.pop("student_id",   None)
+    session.pop("student_name", None)
+    session.pop("student_sid",  None)
+    flash("You have been logged out.", "success")
+    return redirect(url_for("student_login"))
+
+
+@app.route("/student/dashboard")
+@student_login_required
+def student_my_dashboard():
+    """Authenticated student dashboard — shows their own profile and attendance."""
+    person_id = session["student_id"]
+    conn = get_db()
+    person = conn.execute(
+        "SELECT id, name, mobile, dob, email, address, department, student_id, image_path, created_at FROM persons WHERE id=?",
+        (person_id,)
+    ).fetchone()
+    conn.close()
+
+    if not person:
+        session.clear()
+        flash("Your account could not be found. Please log in again.", "danger")
+        return redirect(url_for("student_login"))
+
+    return render_template("student_dashboard.html",
+        logged_in=True,
+        person=dict(person)
+    )
+
+
+@app.route("/student/change-password", methods=["GET", "POST"])
+@student_login_required
+def student_change_password():
+    """Student change-password page."""
+    if request.method == "POST":
+        current_pw  = request.form.get("current_password", "")
+        new_pw      = request.form.get("new_password", "")
+        confirm_pw  = request.form.get("confirm_password", "")
+
+        person_id = session["student_id"]
+        conn = get_db()
+        row  = conn.execute("SELECT student_id, password_hash FROM persons WHERE id=?", (person_id,)).fetchone()
+        conn.close()
+
+        stored_hash = row["password_hash"]
+        # Validate current password (default = Student ID if never changed)
+        if stored_hash:
+            valid_current = check_password_hash(stored_hash, current_pw)
+        else:
+            valid_current = (current_pw == row["student_id"])
+
+        if not valid_current:
+            flash("Current password is incorrect.", "danger")
+        elif new_pw != confirm_pw:
+            flash("New passwords do not match.", "danger")
+        elif len(new_pw) < 6:
+            flash("New password must be at least 6 characters.", "danger")
+        else:
+            conn = get_db()
+            conn.execute(
+                "UPDATE persons SET password_hash=? WHERE id=?",
+                (generate_password_hash(new_pw), person_id)
+            )
+            conn.commit()
+            conn.close()
+            flash("✅ Password changed successfully!", "success")
+            return redirect(url_for("student_my_dashboard"))
+
+    return render_template("student_change_password.html")
+
+
+@app.route("/api/student/lookup")
+def api_student_lookup():
+    """
+    Search for a student by Student ID or Name.
+    Query param: ?q=<search_term>
+    Returns the student's profile as JSON.
+    """
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"error": "Please enter a Student ID or Name."}), 400
+
+    conn = get_db()
+    person = conn.execute(
+        """SELECT id, name, mobile, dob, email, address, department, student_id, image_path, created_at
+           FROM persons
+           WHERE student_id = ? OR LOWER(name) = LOWER(?)
+           LIMIT 1""",
+        (q, q)
+    ).fetchone()
+
+    # Fuzzy fallback: partial name match
+    if not person:
+        person = conn.execute(
+            """SELECT id, name, mobile, dob, email, address, department, student_id, image_path, created_at
+               FROM persons
+               WHERE LOWER(name) LIKE LOWER(?)
+               LIMIT 1""",
+            (f"%{q}%",)
+        ).fetchone()
+
+    conn.close()
+
+    if not person:
+        return jsonify({"error": f"No student found matching '{q}'."}), 404
+
+    return jsonify({
+        "id":           person["id"],
+        "name":         person["name"]         or "",
+        "mobile":       person["mobile"]       or "",
+        "dob":          person["dob"]          or "",
+        "email":        person["email"]        or "",
+        "address":      person["address"]      or "",
+        "department":   person["department"]   or "",
+        "student_id":   person["student_id"]   or "",
+        "image_path":   person["image_path"]   or "",
+        "created_at":   person["created_at"]   or "",
+    })
+
+
+@app.route("/api/student/attendance/<int:person_id>")
+def api_student_attendance(person_id):
+    """
+    Return attendance data for a student:
+    - daily: last 30 days (date → present bool)
+    - monthly: last 12 months (year-month → present_days count)
+    - today: whether present today
+    - stats: total_present, total_absent, percentage
+    """
+    today_str = date.today().isoformat()
+    conn = get_db()
+
+    # ── Daily: last 30 days ──────────────────────────
+    daily_rows = conn.execute("""
+        SELECT DATE(logged_at) as day,
+               COUNT(*) as scan_count
+        FROM recognition_log
+        WHERE person_id = ? AND recognized = 1
+          AND DATE(logged_at) >= DATE('now', '-29 days')
+        GROUP BY DATE(logged_at)
+    """, (person_id,)).fetchall()
+    present_days_set = {row["day"] for row in daily_rows}
+
+    # Build full 30-day list
+    from datetime import timedelta
+    daily = []
+    for i in range(29, -1, -1):
+        d = (date.today() - timedelta(days=i)).isoformat()
+        daily.append({"date": d, "present": d in present_days_set})
+
+    # ── Monthly: last 12 months ───────────────────────
+    monthly_rows = conn.execute("""
+        SELECT strftime('%Y-%m', logged_at) as month,
+               COUNT(DISTINCT DATE(logged_at)) as present_days
+        FROM recognition_log
+        WHERE person_id = ? AND recognized = 1
+          AND logged_at >= DATE('now', '-365 days')
+        GROUP BY month
+        ORDER BY month ASC
+    """, (person_id,)).fetchall()
+
+    # Build full 12-month list
+    monthly = []
+    for m in range(11, -1, -1):
+        target = date.today().replace(day=1)
+        month_num = target.month - m
+        year_offset = 0
+        while month_num <= 0:
+            month_num += 12
+            year_offset -= 1
+        month_date = target.replace(year=target.year + year_offset, month=month_num)
+        label = month_date.strftime("%Y-%m")
+        short_label = month_date.strftime("%b")
+        monthly.append({"month": label, "label": short_label, "present_days": 0})
+
+    monthly_map = {r["month"]: r["present_days"] for r in monthly_rows}
+    for entry in monthly:
+        entry["present_days"] = monthly_map.get(entry["month"], 0)
+
+    # ── Stats ─────────────────────────────────────────
+    total_present = len(present_days_set)
+    total_days    = 30
+    attendance_pct = round((total_present / total_days) * 100, 1) if total_days > 0 else 0
+    is_today_present = today_str in present_days_set
+
+    conn.close()
+
+    return jsonify({
+        "daily":           daily,
+        "monthly":         monthly,
+        "today_present":   is_today_present,
+        "total_present":   total_present,
+        "total_absent":    total_days - total_present,
+        "attendance_pct":  attendance_pct,
+    })
+
 
 
 # ─────────────────────────────────────────────
